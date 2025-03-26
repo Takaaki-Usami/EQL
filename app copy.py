@@ -108,14 +108,8 @@ st.header("実行")
 st.caption("入力したデータを基にExcelファイルを生成します。")
 button = st.button(label="計算を実行する",key="exe")
 
-import mysql.connector
-from mysql.connector import Error
-from datetime import datetime
-
-# ▼ 実行ボタンが押されたときの処理
 if button:
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
     data_single = [
         main_structure, pile_type, purchased_soil, sand, gravel,
         crushed_stone, solidifying, rebar, formwork, steel_frame, deck_plate,
@@ -125,7 +119,6 @@ if button:
 
     cement_type = cement_type or "未入力"
 
-    # Excelファイル作成（必要に応じて）
     link = write_excel.create_excel(
         data_single,
         use_options_data,
@@ -133,131 +126,138 @@ if button:
         cement_type,
         precast_pile_data,
         cast_concrete_data,
-        precast_concrete_data
-    )
+        precast_concrete_data) # Excelファイルを複製
+
+    server = 'localhost,1433'
+    database = 'EQL'
+    username = 'SA'
+    password = 'yourStrong(!)Password'
+    driver = '{ODBC Driver 18 for SQL Server}'
 
     try:
-        conn = mysql.connector.connect(
-            host='your_mysql_host',      # 例: mysql999.xserver.jp
-            database='EQL',
-            user='your_mysql_user',
-            password='your_mysql_password'
-        )
+        conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password};TrustServerCertificate=yes;Encrypt=no'
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+        
+        insert_construction_info = """
+        INSERT INTO Construction_info (
+            main_structure, pile_type, purchased_soil, sand, gravel, 
+            crushed_stone, solidifying, rebar, formwork, steel_frame, deck_plate, 
+            affiliation, lastname, firstname, department, phonenumber, email_address,
+            creation_date, update_date
+        ) OUTPUT INSERTED.ID VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """
 
-        if conn.is_connected():
-            cursor = conn.cursor()
+        cursor.execute(insert_construction_info, data_single)
+        
+        construction_id = cursor.fetchone()[0]
 
-            insert_construction_info = """
-            INSERT INTO Construction_info (
-                main_structure, pile_type, purchased_soil, sand, gravel, 
-                crushed_stone, solidifying, rebar, formwork, steel_frame, deck_plate, 
-                affiliation, lastname, firstname, department, phonenumber, email_address,
-                creation_date, update_date
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        if construction_id is None:
+            raise ValueError("Construction_info にデータを挿入できませんでした。")
+
+        # Use_options にデータを挿入
+        insert_use_options = """
+        INSERT INTO Use_options (
+            Construction_ID, use_option, area, creation_date, update_date
+        ) VALUES (?, ?, ?, ?, ?)
+        """
+        for key, data in use_options_data.items():
+            cursor.execute(insert_use_options, (
+                construction_id,
+                data['建物用途'],
+                data['床面積'],
+                now,
+                now
+            ))
+
+        if pile_type == "現場打杭":
+            # Cast_pile にデータを挿入
+            insert_cast_pile = """
+            INSERT INTO Cast_pile (
+                Construction_ID, cement_type, strength, cast_pile_quantity, creation_date, update_date
+            ) VALUES (?, ?, ?, ?, ?, ?)
             """
-            cursor.execute(insert_construction_info, data_single)
-            construction_id = cursor.lastrowid
 
-            if construction_id is None:
-                raise ValueError("Construction_info にデータを挿入できませんでした。")
-
-            insert_use_options = """
-            INSERT INTO Use_options (
-                Construction_ID, use_option, area, creation_date, update_date
-            ) VALUES (%s, %s, %s, %s, %s)
-            """
-            for key, data in use_options_data.items():
-                cursor.execute(insert_use_options, (
+            for key, data in cast_pile_data.items():
+                cursor.execute(insert_cast_pile, (
                     construction_id,
-                    data['建物用途'],
-                    data['床面積'],
-                    now,
-                    now
-                ))
-
-            if pile_type == "現場打杭":
-                insert_cast_pile = """
-                INSERT INTO Cast_pile (
-                    Construction_ID, cement_type, strength, cast_pile_quantity, creation_date, update_date
-                ) VALUES (%s, %s, %s, %s, %s, %s)
-                """
-                for key, data in cast_pile_data.items():
-                    cursor.execute(insert_cast_pile, (
-                        construction_id,
-                        cement_type,
-                        data['設計基準強度'],
-                        data['コンクリート数量'],
-                        now,
-                        now
-                    ))
-
-            elif pile_type == "既製杭":
-                insert_precast_pile = """
-                INSERT INTO Precast_pile (
-                    Construction_ID, sign, pile_type, phi, pile_length, thickness, precast_pile_quantity, creation_date, update_date
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                for key, data in precast_pile_data.items():
-                    cursor.execute(insert_precast_pile, (
-                        construction_id,
-                        data['記号'],
-                        data['杭種'],
-                        data['φ(mm)'],
-                        data['L(mm)'],
-                        data['t(mm)'],
-                        data['員数'],
-                        now,
-                        now
-                    ))
-
-            insert_cast_concrete = """
-            INSERT INTO Cast_concrete (
-                Construction_ID, cement_type, strength, cast_concrete_quantity, creation_date, update_date
-            ) VALUES (%s, %s, %s, %s, %s, %s)
-            """
-            for key, data in cast_concrete_data.items():
-                cursor.execute(insert_cast_concrete, (
-                    construction_id,
-                    data['セメント種別'],
+                    cement_type,
                     data['設計基準強度'],
-                    data['数量(m3)'],
+                    data['コンクリート数量'],
                     now,
                     now
                 ))
 
-            insert_precast_concrete = """
-            INSERT INTO Precast_concrete (
-                Construction_ID, strength, precast_concrete_quantity, creation_date, update_date
-            ) VALUES (%s, %s, %s, %s, %s)
+        elif pile_type == "既製杭":
+            # Precast_pile にデータを挿入
+            insert_precast_pile = """
+            INSERT INTO Precast_pile (
+                Construction_ID, sign, pile_type, phi, pile_length, thickness, precast_pile_quantity, creation_date, update_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
-            for key, data in precast_concrete_data.items():
-                cursor.execute(insert_precast_concrete, (
+
+            for key, data in precast_pile_data.items():
+                cursor.execute(insert_precast_pile, (
                     construction_id,
-                    data['設計基準強度'],
-                    data['数量(m3)'],
+                    data['記号'],
+                    data['杭種'],
+                    data['φ(mm)'],
+                    data['L(mm)'],
+                    data['t(mm)'],
+                    data['員数'],
                     now,
                     now
                 ))
 
-            conn.commit()
-            st.success(f"データの挿入が完了しました。Construction_info ID: {construction_id}")
+        # Cast_concrete にデータを挿入
+        insert_cast_concrete = """
+        INSERT INTO Cast_concrete (
+            Construction_ID, cement_type, strength, cast_concrete_quantity, creation_date, update_date
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """
 
-    except Error as e:
-        st.error(f"エラーが発生しました: {e}")
+        for key, data in cast_concrete_data.items():
+            cursor.execute(insert_cast_concrete, (
+                construction_id,
+                data['セメント種別'],
+                data['設計基準強度'],
+                data['数量(m3)'],
+                now,
+                now
+            ))
+
+        # Precast_concrete にデータを挿入
+        insert_precast_concrete = """
+        INSERT INTO Precast_concrete (
+            Construction_ID, strength, precast_concrete_quantity, creation_date, update_date
+        ) VALUES (?, ?, ?, ?, ?)
+        """
+
+        for key, data in precast_concrete_data.items():
+            cursor.execute(insert_precast_concrete, (
+                construction_id,
+                data['設計基準強度'],
+                data['数量(m3)'],
+                now,
+                now
+            ))
+
+        conn.commit()
+        print(f"データの挿入が完了しました。Construction_info ID: {construction_id}")
+
+    except Exception as e:
+        print(f"エラーが発生しました: {e}")
         if conn:
             conn.rollback()
-
     finally:
         if cursor:
             cursor.close()
         if conn:
             conn.close()
 
-    # Excelのダウンロードリンク表示
     if link:
         st.success("Excelファイルの作成が完了しました。以下のリンクからダウンロードしてください。")
         st.markdown(link, unsafe_allow_html=True)
-
 
 # ■■■お問い合わせ■■■
 st.header("お問い合わせ")
