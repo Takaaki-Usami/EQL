@@ -127,33 +127,43 @@ if button:
         cement_type,
         precast_pile_data,
         cast_concrete_data,
-        precast_concrete_data)
+        precast_concrete_data) # Excelファイルを複製
 
-    db = xserver_class()
-    db.open()
+    server = 'localhost,1433'
+    database = 'EQL'
+    username = 'SA'
+    password = 'yourStrong(!)Password'
+    driver = '{ODBC Driver 18 for SQL Server}'
 
     try:
+        conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password};TrustServerCertificate=yes;Encrypt=no'
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+        
         insert_construction_info = """
         INSERT INTO Construction_info (
             main_structure, pile_type, purchased_soil, sand, gravel, 
             crushed_stone, solidifying, rebar, formwork, steel_frame, deck_plate, 
             affiliation, lastname, firstname, department, phonenumber, email_address,
             creation_date, update_date
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        ) OUTPUT INSERTED.ID VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
-        db.cur.execute(insert_construction_info, data_single)
-        construction_id = db.cur.lastrowid
+
+        cursor.execute(insert_construction_info, data_single)
+        
+        construction_id = cursor.fetchone()[0]
 
         if construction_id is None:
             raise ValueError("Construction_info にデータを挿入できませんでした。")
 
+        # Use_options にデータを挿入
         insert_use_options = """
         INSERT INTO Use_options (
             Construction_ID, use_option, area, creation_date, update_date
-        ) VALUES (%s, %s, %s, %s, %s)
+        ) VALUES (?, ?, ?, ?, ?)
         """
-        for _, data in use_options_data.items():
-            db.cur.execute(insert_use_options, (
+        for key, data in use_options_data.items():
+            cursor.execute(insert_use_options, (
                 construction_id,
                 data['建物用途'],
                 data['床面積(m2)'],
@@ -162,13 +172,15 @@ if button:
             ))
 
         if pile_type == "現場打杭":
+            # Cast_pile にデータを挿入
             insert_cast_pile = """
             INSERT INTO Cast_pile (
                 Construction_ID, cement_type, strength, cast_pile_quantity, creation_date, update_date
-            ) VALUES (%s, %s, %s, %s, %s, %s)
+            ) VALUES (?, ?, ?, ?, ?, ?)
             """
-            for _, data in cast_pile_data.items():
-                db.cur.execute(insert_cast_pile, (
+
+            for key, data in cast_pile_data.items():
+                cursor.execute(insert_cast_pile, (
                     construction_id,
                     cement_type,
                     data['設計基準強度(N/mm2)'],
@@ -178,13 +190,15 @@ if button:
                 ))
 
         elif pile_type == "既製杭":
+            # Precast_pile にデータを挿入
             insert_precast_pile = """
             INSERT INTO Precast_pile (
                 Construction_ID, sign, pile_type, phi, pile_length, thickness, precast_pile_quantity, creation_date, update_date
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
-            for _, data in precast_pile_data.items():
-                db.cur.execute(insert_precast_pile, (
+
+            for key, data in precast_pile_data.items():
+                cursor.execute(insert_precast_pile, (
                     construction_id,
                     data['記号'],
                     data['杭種'],
@@ -196,13 +210,15 @@ if button:
                     now
                 ))
 
+        # Cast_concrete にデータを挿入
         insert_cast_concrete = """
         INSERT INTO Cast_concrete (
             Construction_ID, cement_type, strength, cast_concrete_quantity, creation_date, update_date
-        ) VALUES (%s, %s, %s, %s, %s, %s)
+        ) VALUES (?, ?, ?, ?, ?, ?)
         """
-        for _, data in cast_concrete_data.items():
-            db.cur.execute(insert_cast_concrete, (
+
+        for key, data in cast_concrete_data.items():
+            cursor.execute(insert_cast_concrete, (
                 construction_id,
                 data['セメント種別'],
                 data['設計基準強度(N/mm2)'],
@@ -211,13 +227,15 @@ if button:
                 now
             ))
 
+        # Precast_concrete にデータを挿入
         insert_precast_concrete = """
         INSERT INTO Precast_concrete (
             Construction_ID, strength, precast_concrete_quantity, creation_date, update_date
-        ) VALUES (%s, %s, %s, %s, %s)
+        ) VALUES (?, ?, ?, ?, ?)
         """
-        for _, data in precast_concrete_data.items():
-            db.cur.execute(insert_precast_concrete, (
+
+        for key, data in precast_concrete_data.items():
+            cursor.execute(insert_precast_concrete, (
                 construction_id,
                 data['設計基準強度(N/mm2)'],
                 data['数量(m3)'],
@@ -225,15 +243,18 @@ if button:
                 now
             ))
 
-        db.con.commit()
-        st.success(f"データベースへの登録が完了しました。Construction_info ID: {construction_id}")
+        conn.commit()
+        print(f"データの挿入が完了しました。Construction_info ID: {construction_id}")
 
     except Exception as e:
-        db.con.rollback()
-        st.error(f"エラーが発生しました: {e}")
-
+        print(f"エラーが発生しました: {e}")
+        if conn:
+            conn.rollback()
     finally:
-        db.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
     if link:
         st.success("Excelファイルの作成が完了しました。以下のリンクからダウンロードしてください。")
