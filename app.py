@@ -3,7 +3,7 @@ from src.modules import formula
 from src.modules import write_excel
 import pyodbc
 from datetime import datetime
-from xserver_db import xserver_class
+from src.modules import xserver_class
 
 # 選択肢を配列に格納(グローバル変数削減のため関数化)
 def list_structure():
