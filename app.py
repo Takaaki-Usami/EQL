@@ -149,9 +149,10 @@ if button:
         precast_concrete_data)
 
     try:
-        res = supabase.table("construction_info").insert(data_single).execute()
-        if res.status_code != 201:
-            raise ValueError("Construction_info の登録に失敗しました")
+        res = supabase.table("table_name").insert(data).execute()
+        st.success("登録成功！")
+    except Exception as e:
+        st.error(f"登録エラー: {e}")
 
         construction_id = res.data[0]["id"]
 
