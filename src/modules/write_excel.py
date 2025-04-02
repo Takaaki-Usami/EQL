@@ -29,7 +29,7 @@ def create_excel(data_single, use_options_data, cast_pile_data, cement_type, pre
     j = 0
     for i, element in use_options_data.items(): # 用途別面積 
         sheet_multi[f"A{j+3}"].value = element['建物用途']
-        sheet_multi[f"B{j+3}"].value = element['床面積']
+        sheet_multi[f"B{j+3}"].value = element['床面積(m2)']
         j += 1
     
     if not isinstance(cast_pile_data, dict): # 現場打杭
@@ -38,7 +38,7 @@ def create_excel(data_single, use_options_data, cast_pile_data, cement_type, pre
         j = 0
         for i, element in cast_pile_data.items():
             sheet_multi[f"G{j+3}"].value = cement_type
-            sheet_multi[f"H{j+3}"].value = element['設計基準強度']
+            sheet_multi[f"H{j+3}"].value = element['設計基準強度(N/mm2)']
             sheet_multi[f"I{j+3}"].value = element['コンクリート数量']
             j += 1
 
@@ -58,13 +58,13 @@ def create_excel(data_single, use_options_data, cast_pile_data, cement_type, pre
     j = 0
     for i, element in cast_concrete_data.items(): # 現場打コンクリート
         sheet_multi[f"X{j+3}"].value = element['セメント種別']
-        sheet_multi[f"Y{j+3}"].value = element['設計基準強度']
+        sheet_multi[f"Y{j+3}"].value = element['設計基準強度(N/mm2)']
         sheet_multi[f"Z{j+3}"].value = element['数量(m3)']
         j += 1
 
     j = 0
     for i, element in precast_concrete_data.items(): # PCaコンクリート(鉄筋無し)
-        sheet_multi[f"AE{j+3}"].value = element['設計基準強度']
+        sheet_multi[f"AE{j+3}"].value = element['設計基準強度(N/mm2)']
         sheet_multi[f"AF{j+3}"].value = element['数量(m3)']
         j += 1
 
