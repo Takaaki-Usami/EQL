@@ -45,7 +45,7 @@ if pile_type == "現場打杭":
         ("コンクリート数量(m3)","number_input","")
     ], [5,5,2])
 elif pile_type == "既製杭":
-    st.text("※記号、杭記号については任意入力")
+    st.text("※杭記号については任意入力")
     precast_pile_data = formula.generate_multicolumn_interface("既製杭", [
         ("記号", "text_input", ""),
         ("杭種", "select_box", list_precast_piles()),
