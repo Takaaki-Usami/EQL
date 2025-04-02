@@ -5,3 +5,5 @@ openpyxl
 pyodbc
 sshtunnel
 mysql-connector-python
+supabase
+python-dotenv
