@@ -39,7 +39,7 @@ def create_excel(data_single, use_options_data, cast_pile_data, cement_type, pre
         for i, element in cast_pile_data.items():
             sheet_multi[f"G{j+3}"].value = cement_type
             sheet_multi[f"H{j+3}"].value = element['設計基準強度(N/mm2)']
-            sheet_multi[f"I{j+3}"].value = element['コンクリート数量']
+            sheet_multi[f"I{j+3}"].value = element['コンクリート数量(m3)']
             j += 1
 
     if not isinstance(precast_pile_data, dict): # 既製杭
