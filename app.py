@@ -5,8 +5,8 @@ from datetime import datetime
 from supabase import create_client, Client
 
 # Supabase接続
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+SUPABASE_URL = "https://gkejpglkzbwzkrjryasl.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrZWpwZ2xremJ3emtyanJ5YXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1NTExOTUsImV4cCI6MjA1OTEyNzE5NX0.lPGBqD_oT6GgRMpRBriEGs9HD5hPb__QAK1yggICGfg"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # 選択肢を配列に格納(グローバル変数削減のため関数化)
