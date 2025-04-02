@@ -27,7 +27,7 @@ st.text("建物情報を入力すると、J-CATによる簡易算定ファイル
 # ■■■物件情報■■■
 st.header("物件情報")
 main_structure = formula.generate_single_interface("主要構造","select_box",list_structure())
-use_options_data = formula.generate_multicolumn_interface("用途別面積":[
+use_options_data = formula.generate_multicolumn_interface("用途別面積",[
     ("建物用途", "select_box", list_use_options()),
     ("床面積(m2)", "number_input", "")
 ],[5,5,2])
@@ -41,7 +41,7 @@ precast_pile_data = {}
 # 現場打杭入力
 if pile_type == "現場打杭":
     cement_type = formula.generate_single_interface("セメント種別","select_box",list_cement_types())
-    cast_pile_data = formula.generate_multicolumn_interface("現場打杭":[
+    cast_pile_data = formula.generate_multicolumn_interface("現場打杭",[
         ("設計基準強度(N/mm2)","number_input2",""),  
         ("コンクリート数量(m3)","number_input","")
     ],[5,5,2])
@@ -78,7 +78,7 @@ cast_concrete_data = formula.generate_multicolumn_interface("現場打コンク�
 ],[4,3,3,2])
 st.subheader("PCaコンクリート(鉄筋あり)")
 precast_concrete_raber = formula.generate_single_interface("PCaコンクリート(m3)","number_input","")
-precast_concrete_data = formula.generate_multicolumn_interface("PCaコンクリート(鉄筋なし)":[
+precast_concrete_data = formula.generate_multicolumn_interface("PCaコンクリート(鉄筋なし)",[
     ("設計基準強度(N/mm2)", "number_input2", ""),
     ("数量(m3)", "number_input", "")
 ],[5,5,2])
