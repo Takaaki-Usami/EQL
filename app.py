@@ -196,7 +196,7 @@ if button:
                 "update_date": now
             }).execute()
 
-        st.success(f"Supabaseへの登録が完了しました。Construction_info ID: {construction_id}")
+        # st.success(f"Supabaseへの登録が完了しました。Construction_info ID: {construction_id}")
 
     except Exception as e:
         st.error(f"登録中にエラーが発生しました: {e}")
