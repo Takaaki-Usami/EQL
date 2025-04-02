@@ -4,6 +4,12 @@ from src.modules import write_excel
 import pyodbc
 from datetime import datetime
 from src.xserver_db import xserver_class
+from supabase import create_client, Client  # ← Supabaseクライアント追加
+
+# Supabase接続情報
+SUPABASE_URL = "https://gkejpglkzbwzkrjryasl.supabase.co"  # ← あなたのProject URLに置き換えてください
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrZWpwZ2xremJ3emtyanJ5YXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1NTExOTUsImV4cCI6MjA1OTEyNzE5NX0.lPGBqD_oT6GgRMpRBriEGs9HD5hPb__QAK1yggICGfg"  # ← あなたのAPIキーに置き換えてください
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # 選択肢を配列に格納(グローバル変数削減のため関数化)
 def list_structure():
@@ -23,7 +29,7 @@ st.text("建物情報を入力すると、J-CATによる簡易算定ファイル
 # ■■■物件情報■■■
 st.header("物件情報")
 main_structure = formula.generate_single_interface("主要構造","select_box",list_structure())
-use_options_data = formula.generate_multicolumn_interface("用途別面積",[
+use_options_data = formula.generate_multicolumn_interface("用途別面積":[
     ("建物用途", "select_box", list_use_options()),
     ("床面積(m2)", "number_input", "")
 ],[5,5,2])
@@ -37,7 +43,7 @@ precast_pile_data = {}
 # 現場打杭入力
 if pile_type == "現場打杭":
     cement_type = formula.generate_single_interface("セメント種別","select_box",list_cement_types())
-    cast_pile_data = formula.generate_multicolumn_interface("現場打杭",[
+    cast_pile_data = formula.generate_multicolumn_interface("現場打杭":[
         ("設計基準強度(N/mm2)","number_input2",""),  
         ("コンクリート数量(m3)","number_input","")
     ],[5,5,2])
@@ -74,7 +80,7 @@ cast_concrete_data = formula.generate_multicolumn_interface("現場打コンク�
 ],[4,3,3,2])
 st.subheader("PCaコンクリート(鉄筋あり)")
 precast_concrete_raber = formula.generate_single_interface("PCaコンクリート(m3)","number_input","")
-precast_concrete_data = formula.generate_multicolumn_interface("PCaコンクリート(鉄筋なし)",[
+precast_concrete_data = formula.generate_multicolumn_interface("PCaコンクリート(鉄筋なし)":[
     ("設計基準強度(N/mm2)", "number_input2", ""),
     ("数量(m3)", "number_input", "")
 ],[5,5,2])
@@ -111,17 +117,32 @@ button = st.button(label="計算を実行する",key="exe")
 
 if button:
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    data_single = [
-        main_structure, pile_type, purchased_soil, sand, gravel,
-        crushed_stone, solidifying, rebar, formwork, steel_frame, deck_plate,
-        affiliation, lastname, firstname, department, phonenumber, email_address,
-        now, now
-    ]
+    data_single = {
+        "main_structure": main_structure,
+        "pile_type": pile_type,
+        "purchased_soil": purchased_soil,
+        "sand": sand,
+        "gravel": gravel,
+        "crushed_stone": crushed_stone,
+        "solidifying": solidifying,
+        "rebar": rebar,
+        "formwork": formwork,
+        "steel_frame": steel_frame,
+        "deck_plate": deck_plate,
+        "affiliation": affiliation,
+        "lastname": lastname,
+        "firstname": firstname,
+        "department": department,
+        "phonenumber": phonenumber,
+        "email_address": email_address,
+        "creation_date": now,
+        "update_date": now
+    }
 
     cement_type = cement_type or "未入力"
 
     link = write_excel.create_excel(
-        data_single,
+        list(data_single.values()),
         use_options_data,
         cast_pile_data,
         cement_type,
@@ -129,111 +150,70 @@ if button:
         cast_concrete_data,
         precast_concrete_data)
 
-    db = xserver_class()
-    db.open()
-
     try:
-        insert_construction_info = """
-        INSERT INTO Construction_info (
-            main_structure, pile_type, purchased_soil, sand, gravel, 
-            crushed_stone, solidifying, rebar, formwork, steel_frame, deck_plate, 
-            affiliation, lastname, firstname, department, phonenumber, email_address,
-            creation_date, update_date
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """
-        db.cur.execute(insert_construction_info, data_single)
-        construction_id = db.cur.lastrowid
+        res = supabase.table("construction_info").insert(data_single).execute()
+        if res.status_code != 201:
+            raise ValueError("Construction_info の登録に失敗しました")
 
-        if construction_id is None:
-            raise ValueError("Construction_info にデータを挿入できませんでした。")
+        construction_id = res.data[0]["id"]
 
-        insert_use_options = """
-        INSERT INTO Use_options (
-            Construction_ID, use_option, area, creation_date, update_date
-        ) VALUES (%s, %s, %s, %s, %s)
-        """
         for _, data in use_options_data.items():
-            db.cur.execute(insert_use_options, (
-                construction_id,
-                data['建物用途'],
-                data['床面積(m2)'],
-                now,
-                now
-            ))
+            supabase.table("use_options").insert({
+                "construction_id": construction_id,
+                "use_option": data['建物用途'],
+                "area": data['床面積(m2)'],
+                "creation_date": now,
+                "update_date": now
+            }).execute()
 
         if pile_type == "現場打杭":
-            insert_cast_pile = """
-            INSERT INTO Cast_pile (
-                Construction_ID, cement_type, strength, cast_pile_quantity, creation_date, update_date
-            ) VALUES (%s, %s, %s, %s, %s, %s)
-            """
             for _, data in cast_pile_data.items():
-                db.cur.execute(insert_cast_pile, (
-                    construction_id,
-                    cement_type,
-                    data['設計基準強度(N/mm2)'],
-                    data['コンクリート数量(m3)'],
-                    now,
-                    now
-                ))
+                supabase.table("cast_pile").insert({
+                    "construction_id": construction_id,
+                    "cement_type": cement_type,
+                    "strength": data['設計基準強度(N/mm2)'],
+                    "cast_pile_quantity": data['コンクリート数量(m3)'],
+                    "creation_date": now,
+                    "update_date": now
+                }).execute()
 
         elif pile_type == "既製杭":
-            insert_precast_pile = """
-            INSERT INTO Precast_pile (
-                Construction_ID, sign, pile_type, phi, pile_length, thickness, precast_pile_quantity, creation_date, update_date
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
             for _, data in precast_pile_data.items():
-                db.cur.execute(insert_precast_pile, (
-                    construction_id,
-                    data['記号'],
-                    data['杭種'],
-                    data['φ(mm)'],
-                    data['L(mm)'],
-                    data['t(mm)'],
-                    data['員数'],
-                    now,
-                    now
-                ))
+                supabase.table("precast_pile").insert({
+                    "construction_id": construction_id,
+                    "sign": data['記号'],
+                    "pile_type": data['杭種'],
+                    "phi": data['φ(mm)'],
+                    "pile_length": data['L(mm)'],
+                    "thickness": data['t(mm)'],
+                    "precast_pile_quantity": data['員数'],
+                    "creation_date": now,
+                    "update_date": now
+                }).execute()
 
-        insert_cast_concrete = """
-        INSERT INTO Cast_concrete (
-            Construction_ID, cement_type, strength, cast_concrete_quantity, creation_date, update_date
-        ) VALUES (%s, %s, %s, %s, %s, %s)
-        """
         for _, data in cast_concrete_data.items():
-            db.cur.execute(insert_cast_concrete, (
-                construction_id,
-                data['セメント種別'],
-                data['設計基準強度(N/mm2)'],
-                data['数量(m3)'],
-                now,
-                now
-            ))
+            supabase.table("cast_concrete").insert({
+                "construction_id": construction_id,
+                "cement_type": data['セメント種別'],
+                "strength": data['設計基準強度(N/mm2)'],
+                "cast_concrete_quantity": data['数量(m3)'],
+                "creation_date": now,
+                "update_date": now
+            }).execute()
 
-        insert_precast_concrete = """
-        INSERT INTO Precast_concrete (
-            Construction_ID, strength, precast_concrete_quantity, creation_date, update_date
-        ) VALUES (%s, %s, %s, %s, %s)
-        """
         for _, data in precast_concrete_data.items():
-            db.cur.execute(insert_precast_concrete, (
-                construction_id,
-                data['設計基準強度(N/mm2)'],
-                data['数量(m3)'],
-                now,
-                now
-            ))
+            supabase.table("precast_concrete").insert({
+                "construction_id": construction_id,
+                "strength": data['設計基準強度(N/mm2)'],
+                "precast_concrete_quantity": data['数量(m3)'],
+                "creation_date": now,
+                "update_date": now
+            }).execute()
 
-        db.con.commit()
-        st.success(f"データベースへの登録が完了しました。Construction_info ID: {construction_id}")
+        st.success(f"Supabaseへの登録が完了しました。Construction_info ID: {construction_id}")
 
     except Exception as e:
-        db.con.rollback()
         st.error(f"エラーが発生しました: {e}")
-
-    finally:
-        db.close()
 
     if link:
         st.success("Excelファイルの作成が完了しました。以下のリンクからダウンロードしてください。")
