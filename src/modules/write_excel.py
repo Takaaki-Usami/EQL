@@ -6,9 +6,12 @@ import openpyxl
 import datetime
 import threading
 
+# 日本標準時（JST）
+JST = datetime.timezone(datetime.timedelta(hours=9))
+
 def create_excel(data_single, use_options_data, cast_pile_data, cement_type, precast_pile_data, cast_concrete_data, precast_concrete_data):
     # 現在時刻
-    dt_now = datetime.datetime.now()
+    dt_now = datetime.datetime.now(JST)
     
     # ブックのコピー
     file_name = "J-CAT読込用.xlsm"
