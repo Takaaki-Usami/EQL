@@ -1,9 +1,7 @@
 import streamlit as st
 from src.modules import formula
 from src.modules import write_excel
-import pyodbc
 from datetime import datetime
-from src.xserver_db import xserver_class
 from supabase import create_client, Client  # ← Supabaseクライアント追加
 
 # Supabase接続情報
