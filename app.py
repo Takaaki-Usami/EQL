@@ -3,6 +3,7 @@ from src.modules import formula
 from src.modules import write_excel
 from datetime import datetime
 from supabase import create_client, Client
+import datetime
 
 # Supabase接続
 SUPABASE_URL = "https://gkejpglkzbwzkrjryasl.supabase.co"
