@@ -104,7 +104,8 @@ st.header("実行")
 button = st.button("計算を実行する")
 
 if button:
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    JST = datetime.timezone(datetime.timedelta(hours=9))
+    now = datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S')
     data_single = {
         "main_structure": main_structure,
         "pile_type": pile_type,
