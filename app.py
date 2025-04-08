@@ -115,6 +115,7 @@ if button:
         "gravel": gravel,
         "crushed_stone": crushed_stone,
         "solidifying": solidifying,
+        "precast_concrete_raber": precast_concrete_raber,
         "rebar": rebar,
         "formwork": formwork,
         "steel_frame": steel_frame,
