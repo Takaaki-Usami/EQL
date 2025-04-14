@@ -114,6 +114,7 @@ with st.expander("入力情報の取り扱いについて（クリックで表�
     - 本アプリの利用により生じた一切の損害について、運営者は責任を負いません。
     """)
 agree = st.checkbox("上記の免責事項に同意する")
+button = False
 if agree:
     button = st.button("計算を実行する")
 else:
