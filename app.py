@@ -102,7 +102,22 @@ if "@" not in email_address and not email_address == "":
 
 # ■■■実行■■■
 st.header("実行")
-button = st.button("計算を実行する")
+
+st.markdown("#### 免責事項")
+with st.expander("入力情報の取り扱いについて（クリックで表示）"):
+    st.markdown("""
+    当アプリでは、ユーザーが入力した情報を元にExcelファイルを生成し、Supabaseに登録します。  
+    入力された内容は適切に管理いたしますが、以下の点についてあらかじめご理解・ご了承の上ご利用ください。
+
+    - 入力された情報の正確性については利用者ご自身でご確認ください。
+    - 通信環境やサーバー障害等により情報が正常に登録・出力されない場合があります。
+    - 本アプリの利用により生じた一切の損害について、運営者は責任を負いません。
+    """)
+agree = st.checkbox("上記の免責事項に同意する")
+if agree:
+    button = st.button("計算を実行する")
+else:
+    st.warning("免責事項に同意してください。")
 
 if button:
     JST = datetime.timezone(datetime.timedelta(hours=9))
